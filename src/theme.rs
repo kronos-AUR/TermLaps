@@ -12,7 +12,39 @@ pub enum Theme {
     SolarizedDark,
 }
 
+impl Default for Theme {
+    fn default() -> Self {
+        Theme::Flexoki
+    }
+}
+
 impl Theme {
+    /// All built-in themes, in the order shown in the settings page.
+    pub const ALL: [Theme; 4] = [
+        Theme::Flexoki,
+        Theme::Monokai,
+        Theme::SolarizedLight,
+        Theme::SolarizedDark,
+    ];
+
+    pub fn index(self) -> u32 {
+        match self {
+            Theme::Flexoki => 0,
+            Theme::Monokai => 1,
+            Theme::SolarizedLight => 2,
+            Theme::SolarizedDark => 3,
+        }
+    }
+
+    pub fn from_index(index: u32) -> Theme {
+        match index {
+            1 => Theme::Monokai,
+            2 => Theme::SolarizedLight,
+            3 => Theme::SolarizedDark,
+            _ => Theme::Flexoki,
+        }
+    }
+
     pub fn label(self) -> &'static str {
         match self {
             Theme::Flexoki => "Flexoki",

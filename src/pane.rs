@@ -17,6 +17,7 @@ use vte4::prelude::*;
 use vte4::Terminal;
 
 use crate::config::{Profile, Settings};
+use crate::theme::Theme;
 
 pub struct TerminalPane {
     pub id: u64,
@@ -35,14 +36,8 @@ impl TerminalPane {
     ) -> Rc<RefCell<Self>> {
         let term = Terminal::new();
 
-        // --- Theme -----------------------------------------------------------
-        let palette = profile.theme.palette();
-        let color_refs: Vec<&gdk::RGBA> = palette.colors.iter().collect();
-        term.set_colors(
-            Some(&palette.foreground),
-            Some(&palette.background),
-            &color_refs,
-        );
+        // --- Theme (global, from settings) -------------------------------------
+        // Applied again below once the pane struct exists; see set_theme.
 
         // --- Font / scrollback -------------------------------------------------
         let font = profile
@@ -129,11 +124,24 @@ impl TerminalPane {
         container.set_hexpand(true);
         container.set_vexpand(true);
 
-        Rc::new(RefCell::new(TerminalPane {
+        let pane = Rc::new(RefCell::new(TerminalPane {
             id,
             profile,
             container,
             term,
-        }))
+        }));
+        pane.borrow().set_theme(settings.theme);
+        pane
+    }
+
+    /// Apply a color theme to this terminal.
+    pub fn set_theme(&self, theme: Theme) {
+        let palette = theme.palette();
+        let color_refs: Vec<&gdk::RGBA> = palette.colors.iter().collect();
+        self.term.set_colors(
+            Some(&palette.foreground),
+            Some(&palette.background),
+            &color_refs,
+        );
     }
 }

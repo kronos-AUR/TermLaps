@@ -1,45 +1,32 @@
-# Exemple de configuration TermLaps.
-# Copiez ce fichier vers ~/.config/termlaps/config.toml (il y est écrit
-# automatiquement au premier lancement).
+# TermLaps configuration example.
+# Copy this file to ~/.config/termlaps/config.toml (a default one is written
+# there automatically on first start).
 
 [settings]
-# Police par défaut (peut être surchargée par profil).
+# Default font (can be overridden per profile).
 font = "Monospace 12"
-# Nombre de lignes d'historique conservées par terminal.
+# Number of scrollback lines kept per terminal.
 scrollback_lines = 10000
-
-# ---------------------------------------------------------------------------
-# Profils : chaque profil = un onglet possible, avec sa commande et son thème.
-# `command` accepte une chaîne ("/bin/bash") ou une liste
-# (["/usr/bin/env", "zsh", "-l"]) : le premier élément est l'exécutable.
-# `theme` : flexoki | monokai | solarized-light | solarized-dark
-# ---------------------------------------------------------------------------
-
-[[profiles]]
-name = "Flexoki"
-command = "/bin/bash"
+# Color theme for the WHOLE app (all tabs and splits).
+# Can also be changed at runtime from the Settings page (Ctrl+,) —
+# the choice is saved back here and persists across restarts.
+# Values: flexoki | monokai | solarized-light | solarized-dark
 theme = "flexoki"
 
-[[profiles]]
-name = "Monokai"
-command = "/bin/bash"
-theme = "monokai"
+# ---------------------------------------------------------------------------
+# Profiles: each profile is a possible new tab, with its command.
+# `command` accepts a string ("/bin/bash") or a list
+# (["/usr/bin/env", "zsh", "-l"]): the first entry is the executable.
+# ---------------------------------------------------------------------------
 
 [[profiles]]
-name = "Solarized Light"
+name = "Bash"
 command = "/bin/bash"
-theme = "solarized-light"
 
-[[profiles]]
-name = "Solarized Dark"
-command = "/bin/bash"
-theme = "solarized-dark"
-
-# Profil personnalisé :
+# Custom profile example:
 # [[profiles]]
 # name = "Zsh dev"
 # command = ["/bin/zsh", "-l"]
-# theme = "solarized-dark"
 # working_directory = "/home/kronos/Bureau/TermLaps"
 # env = ["EDITOR=nvim"]
 # font = "JetBrains Mono 11"

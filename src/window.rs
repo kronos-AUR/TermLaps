@@ -1,6 +1,7 @@
 //! Main window: header bar with a tab bar, one `AdwTabPage` per tab, and a
 //! recursive `PaneTree` per tab so the view can be split into several
-//! terminals side by side.
+//! terminals side by side. The color theme is global (Settings page) and
+//! applied to every terminal pane.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -13,6 +14,7 @@ use libadwaita::prelude::*;
 
 use crate::config::Config;
 use crate::pane::TerminalPane;
+use crate::theme::Theme;
 use crate::tree::PaneTree;
 
 /// One tab: the AdwTabPage plus the (fixed) holder widget that contains the
@@ -26,14 +28,18 @@ struct TabEntry {
 pub struct AppWindow {
     pub window: adw::ApplicationWindow,
     tab_view: adw::TabView,
-    config: Rc<Config>,
+    config: Rc<RefCell<Config>>,
     tabs: RefCell<Vec<TabEntry>>,
+    /// Every living terminal pane (across all tabs), used to apply the
+    /// global theme to all of them at once.
+    all_panes: RefCell<Vec<Rc<RefCell<TerminalPane>>>>,
     next_pane_id: Cell<u64>,
+    tab_counter: Cell<u32>,
     default_profile: Cell<usize>,
 }
 
 impl AppWindow {
-    pub fn new(app: &adw::Application, config: Rc<Config>) -> Rc<Self> {
+    pub fn new(app: &adw::Application, config: Rc<RefCell<Config>>) -> Rc<Self> {
         let window = adw::ApplicationWindow::new(app);
         window.set_title(Some("TermLaps"));
         window.set_default_size(960, 640);
@@ -52,8 +58,9 @@ impl AppWindow {
         menu.append(Some("New tab"), Some("win.new-tab"));
         menu.append(Some("Split pane"), Some("win.split"));
         menu.append(Some("Close pane"), Some("win.close-pane"));
+        menu.append(Some("Settings"), Some("win.settings"));
         let profiles_section = gio::Menu::new();
-        for (i, profile) in config.profiles.iter().enumerate() {
+        for (i, profile) in config.borrow().profiles.iter().enumerate() {
             profiles_section.append(
                 Some(&format!("New tab: {}", profile.name)),
                 Some(&format!("win.open-profile::{i}")),
@@ -70,7 +77,9 @@ impl AppWindow {
             tab_view: tab_view.clone(),
             config,
             tabs: RefCell::new(Vec::new()),
+            all_panes: RefCell::new(Vec::new()),
             next_pane_id: Cell::new(1),
+            tab_counter: Cell::new(0),
             default_profile: Cell::new(0),
         });
 
@@ -160,6 +169,13 @@ impl AppWindow {
         }
         self.window.add_action(&close_pane);
 
+        let settings = gio::SimpleAction::new("settings", None);
+        {
+            let this = self.clone();
+            settings.connect_activate(move |_, _| this.open_settings());
+        }
+        self.window.add_action(&settings);
+
         let next_tab = gio::SimpleAction::new("next-tab", None);
         {
             let tab_view = self.tab_view.clone();
@@ -185,19 +201,72 @@ impl AppWindow {
         id
     }
 
-    /// Open a new tab running the given profile.
+    /// Apply the global color theme to every terminal and save the config so
+    /// it persists across restarts.
+    pub fn apply_theme(self: &Rc<Self>, theme: Theme) {
+        for pane in self.all_panes.borrow().iter() {
+            pane.borrow().set_theme(theme);
+        }
+        let mut config = self.config.borrow_mut();
+        config.settings.theme = theme;
+        if let Err(err) = config.save() {
+            eprintln!("termlaps: could not save the configuration: {err}");
+        }
+    }
+
+    /// Settings page: lets the user pick the app-wide color theme.
+    pub fn open_settings(self: &Rc<Self>) {
+        let dialog = adw::PreferencesDialog::new();
+        dialog.set_title("Settings");
+
+        let page = adw::PreferencesPage::new();
+        let group = adw::PreferencesGroup::builder()
+            .title("Appearance")
+            .build();
+
+        let model = gtk::StringList::new(&Theme::ALL.map(|t| t.label()));
+        let current = self.config.borrow().settings.theme.index();
+        let row = adw::ComboRow::builder()
+            .title("Color theme")
+            .subtitle("Applied to all terminals, saved across restarts")
+            .model(&model)
+            .selected(current)
+            .build();
+        {
+            let this = self.clone();
+            row.connect_notify_local(Some("selected"), move |row, _| {
+                this.apply_theme(Theme::from_index(row.selected()));
+            });
+        }
+
+        group.add(&row);
+        page.add(&group);
+        dialog.add(&page);
+        dialog.present(Some(&self.window));
+    }
+
+    /// Open a new tab running the given profile. Tabs are named
+    /// "Terminal 1", "Terminal 2", ...
     pub fn open_tab(self: &Rc<Self>, profile_idx: usize) {
-        let profile = self
-            .config
-            .profiles
-            .get(profile_idx)
-            .or_else(|| self.config.profiles.first())
-            .cloned();
+        let profile = {
+            let config = self.config.borrow();
+            config
+                .profiles
+                .get(profile_idx)
+                .or_else(|| config.profiles.first())
+                .cloned()
+        };
         let Some(profile) = profile else {
             eprintln!("termlaps: no profile defined in the configuration");
             return;
         };
         self.default_profile.set(profile_idx);
+
+        let tab_number = {
+            let n = self.tab_counter.get() + 1;
+            self.tab_counter.set(n);
+            n
+        };
 
         let on_exit: Rc<dyn Fn(u64)> = {
             let this = self.clone();
@@ -206,9 +275,10 @@ impl AppWindow {
         let pane = TerminalPane::new(
             self.new_pane_id(),
             profile.clone(),
-            &self.config.settings,
+            &self.config.borrow().settings,
             on_exit,
         );
+        self.all_panes.borrow_mut().push(pane.clone());
         let tree: Rc<RefCell<Option<PaneTree>>> =
             Rc::new(RefCell::new(Some(PaneTree::leaf(pane.clone()))));
 
@@ -218,8 +288,8 @@ impl AppWindow {
         holder.append(&tree.borrow().as_ref().map(PaneTree::widget).unwrap());
 
         let page = self.tab_view.append(&holder);
-        page.set_title(&profile.name);
-        page.set_tooltip(&format!("{} — theme: {}", profile.name, profile.theme.label()));
+        page.set_title(&format!("Terminal {tab_number}"));
+        page.set_tooltip(&format!("{} — {}", profile.name, profile.command.join(" ")));
 
         self.tabs.borrow_mut().push(TabEntry {
             page: page.clone(),
@@ -241,30 +311,37 @@ impl AppWindow {
     }
 
     fn update_title(&self, page: Option<&adw::TabPage>) {
-        let Some(page) = page else {
-            self.window.set_title(Some("TermLaps"));
-            return;
-        };
-        let title = self
-            .tabs
-            .borrow()
-            .iter()
-            .find(|t| Some(&t.page) == Some(page))
-            .and_then(|t| {
-                t.tree
-                    .borrow()
-                    .as_ref()
-                    .map(|tree| tree.first_id())
-                    .and_then(|id| {
-                        t.tree
-                            .borrow()
-                            .as_ref()
-                            .and_then(|tree| tree.profile_of(id))
-                            .map(|p| p.name)
-                    })
-            })
-            .unwrap_or_else(|| "TermLaps".to_string());
-        self.window.set_title(Some(&format!("TermLaps — {title}")));
+        match page {
+            Some(page) => self
+                .window
+                .set_title(Some(&format!("TermLaps — {}", page.title()))),
+            None => self.window.set_title(Some("TermLaps")),
+        }
+    }
+
+    /// Detach the holder's current children, run `f` on the tree and re-attach
+    /// the resulting root widget. Returns false if the tree became empty.
+    fn reattach(
+        holder: &gtk::Box,
+        tree: &Rc<RefCell<Option<PaneTree>>>,
+        f: impl FnOnce(PaneTree) -> Option<PaneTree>,
+    ) -> bool {
+        while let Some(child) = holder.first_child() {
+            holder.remove(&child);
+        }
+        let new_tree = tree.borrow_mut().take().and_then(f);
+        match new_tree {
+            Some(new_tree) => {
+                let widget = new_tree.widget();
+                if widget.parent().is_some() {
+                    widget.unparent();
+                }
+                *tree.borrow_mut() = Some(new_tree);
+                holder.append(&widget);
+                true
+            }
+            None => false,
+        }
     }
 
     /// Split the focused pane of the current tab side by side, reusing the
@@ -287,19 +364,37 @@ impl AppWindow {
             let this = self.clone();
             Rc::new(move |id| this.on_child_exited(id))
         };
-        let pane = TerminalPane::new(self.new_pane_id(), profile, &self.config.settings, on_exit);
-        let mut t = tree.borrow_mut();
-        let Some(tree_ref) = t.as_mut() else { return };
-        if !tree_ref.split(target, pane.clone()) {
-            return;
-        }
-        let widget = tree_ref.widget();
-        drop(t);
+        let pane = TerminalPane::new(
+            self.new_pane_id(),
+            profile,
+            &self.config.borrow().settings,
+            on_exit,
+        );
 
+        // Detach the old root first so the new paned can adopt it cleanly.
         while let Some(child) = holder.first_child() {
             holder.remove(&child);
         }
+        let widget = {
+            let mut t = tree.borrow_mut();
+            let Some(tree_ref) = t.as_mut() else { return };
+            if !tree_ref.split(target, pane.clone()) {
+                return;
+            }
+            tree_ref.widget()
+        };
+        if widget.parent().is_some() {
+            widget.unparent();
+        }
         holder.append(&widget);
+        // Give both panes half of the width on the first split.
+        if let Some(paned) = widget.downcast_ref::<gtk::Paned>() {
+            let width = holder.width();
+            if width > 0 {
+                paned.set_position(width / 2);
+            }
+        }
+        self.all_panes.borrow_mut().push(pane.clone());
         pane.borrow().term.grab_focus();
     }
 
@@ -315,18 +410,10 @@ impl AppWindow {
         };
         let Some(target) = target else { return };
 
-        let new_tree = tree.borrow_mut().take().and_then(|t| t.remove(target));
-        match new_tree {
-            Some(new_tree) => {
-                *tree.borrow_mut() = Some(new_tree);
-                let widget = tree.borrow().as_ref().map(PaneTree::widget).unwrap();
-                while let Some(child) = holder.first_child() {
-                    holder.remove(&child);
-                }
-                holder.append(&widget);
-            }
-            None => self.tab_view.close_page(&page),
+        if !Self::reattach(&holder, &tree, |t| t.remove(target)) {
+            self.tab_view.close_page(&page);
         }
+        self.all_panes.borrow_mut().retain(|p| p.borrow().id != target);
     }
 
     /// A pane's child process exited: remove that pane (or close its tab).
@@ -347,17 +434,9 @@ impl AppWindow {
             return;
         };
 
-        let new_tree = tree.borrow_mut().take().and_then(|t| t.remove(id));
-        match new_tree {
-            Some(new_tree) => {
-                *tree.borrow_mut() = Some(new_tree);
-                let widget = tree.borrow().as_ref().map(PaneTree::widget).unwrap();
-                while let Some(child) = holder.first_child() {
-                    holder.remove(&child);
-                }
-                holder.append(&widget);
-            }
-            None => self.tab_view.close_page(&page),
+        if !Self::reattach(&holder, &tree, |t| t.remove(id)) {
+            self.tab_view.close_page(&page);
         }
+        self.all_panes.borrow_mut().retain(|p| p.borrow().id != id);
     }
 }

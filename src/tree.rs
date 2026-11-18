@@ -87,8 +87,18 @@ impl PaneTree {
                 let paned = gtk::Paned::new(gtk::Orientation::Horizontal);
                 paned.set_hexpand(true);
                 paned.set_vexpand(true);
-                paned.set_start_child(Some(&old_leaf.widget()));
-                paned.set_end_child(Some(&new_leaf.borrow().container));
+                let old_widget = old_leaf.widget();
+                // Detach from the previous parent first: GTK refuses to reparent
+                // a widget that still has one, which silently broke the split.
+                if old_widget.parent().is_some() {
+                    old_widget.unparent();
+                }
+                let new_widget: gtk::Widget = new_leaf.borrow().container.clone().upcast();
+                if new_widget.parent().is_some() {
+                    new_widget.unparent();
+                }
+                paned.set_start_child(Some(&old_widget));
+                paned.set_end_child(Some(&new_widget));
                 paned.set_shrink_start_child(false);
                 paned.set_shrink_end_child(false);
                 *self = PaneTree::Split {
@@ -124,7 +134,11 @@ impl PaneTree {
                 if a.contains(id) {
                     match a.remove(id) {
                         Some(new_a) => {
-                            paned.set_start_child(Some(&new_a.widget()));
+                            let w = new_a.widget();
+                            if w.parent().is_some() {
+                                w.unparent();
+                            }
+                            paned.set_start_child(Some(&w));
                             Some(PaneTree::Split {
                                 paned,
                                 a: Box::new(new_a),
@@ -136,7 +150,11 @@ impl PaneTree {
                 } else {
                     match b.remove(id) {
                         Some(new_b) => {
-                            paned.set_end_child(Some(&new_b.widget()));
+                            let w = new_b.widget();
+                            if w.parent().is_some() {
+                                w.unparent();
+                            }
+                            paned.set_end_child(Some(&w));
                             Some(PaneTree::Split {
                                 paned,
                                 a,

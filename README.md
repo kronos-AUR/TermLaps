@@ -15,8 +15,12 @@ A modern terminal for Linux, written in Rust (GTK 4 / libadwaita / VTE).
   (`Ctrl+Shift+S`), recursively. `Ctrl+Shift+W` closes the focused pane (or
   the tab if it is the last one).
 - **Configurable profiles**: each profile defines the command to run
-  (e.g. `/bin/bash`) and a color theme. Built-in themes: **Flexoki**,
-  **Monokai**, **Solarized Light**, **Solarized Dark**.
+  (e.g. `/bin/bash`), working directory and environment.
+- **Global color theme**: a Settings page (`Ctrl+,` or the ☰ menu) changes
+  the theme of the whole app — all tabs and split panes at once. Built-in
+  themes: **Flexoki**, **Monokai**, **Solarized Light**, **Solarized Dark**.
+  The chosen theme is saved to the config file and persists across restarts.
+- **Tabs are named** `Terminal 1`, `Terminal 2`, …
 
 ## Installation
 
@@ -61,6 +65,7 @@ cargo build --release
 | `Ctrl+C` | Copy the selection, otherwise `SIGINT` to the process |
 | `Ctrl+V` | Paste the clipboard |
 | `Ctrl+Shift+C` / `Ctrl+Shift+V` | Copy / paste (classic VTE shortcuts) |
+| `Ctrl+,` | Open the Settings page (color theme) |
 | `Ctrl+Q` | Quit |
 
 The menu (☰ icon, top left) opens a new tab with any of the configured
@@ -80,16 +85,16 @@ Example (see also `config.example.toml`):
 [settings]
 font = "Monospace 12"
 scrollback_lines = 10000
+theme = "flexoki"   # flexoki | monokai | solarized-light | solarized-dark
+                    # (also changeable at runtime in the Settings page)
 
 [[profiles]]
-name = "Flexoki"
+name = "Bash"
 command = "/bin/bash"            # or ["/usr/bin/fish", "-l"]
-theme = "flexoki"                # flexoki | monokai | solarized-light | solarized-dark
 
 [[profiles]]
-name = "Solarized zsh"
+name = "Zsh dev"
 command = ["/bin/zsh", "-l"]
-theme = "solarized-dark"
 working_directory = "/home/kronos"
 env = ["TERM=xterm-256color"]
 font = "JetBrains Mono 11"
@@ -97,6 +102,8 @@ font = "JetBrains Mono 11"
 
 Each tab — and each split pane — inherits the profile of the pane it comes
 from; a new tab uses the last chosen profile (or the first one in the list).
+The color theme is **not** per profile: it is global and set from the
+Settings page.
 
 ## License
 

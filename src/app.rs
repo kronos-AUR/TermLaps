@@ -16,7 +16,7 @@ pub fn build() -> adw::Application {
         gio::ApplicationFlags::empty(),
     );
 
-    let config = Rc::new(config::load());
+    let config = Rc::new(RefCell::new(config::load()));
     let window: Rc<RefCell<Option<Rc<AppWindow>>>> = Rc::new(RefCell::new(None));
 
     app.connect_startup(move |app| {
@@ -27,6 +27,7 @@ pub fn build() -> adw::Application {
         app.set_accels_for_action("win.close-pane", &["<Ctrl><Shift>w"]);
         app.set_accels_for_action("win.next-tab", &["<Ctrl>Page_Down"]);
         app.set_accels_for_action("win.prev-tab", &["<Ctrl>Page_Up"]);
+        app.set_accels_for_action("win.settings", &["<Ctrl>comma"]);
         app.set_accels_for_action("app.quit", &["<Ctrl>q"]);
 
         let quit = gio::SimpleAction::new("quit", None);
