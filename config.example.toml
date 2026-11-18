@@ -1,0 +1,45 @@
+# Exemple de configuration TermLaps.
+# Copiez ce fichier vers ~/.config/termlaps/config.toml (il y est écrit
+# automatiquement au premier lancement).
+
+[settings]
+# Police par défaut (peut être surchargée par profil).
+font = "Monospace 12"
+# Nombre de lignes d'historique conservées par terminal.
+scrollback_lines = 10000
+
+# ---------------------------------------------------------------------------
+# Profils : chaque profil = un onglet possible, avec sa commande et son thème.
+# `command` accepte une chaîne ("/bin/bash") ou une liste
+# (["/usr/bin/env", "zsh", "-l"]) : le premier élément est l'exécutable.
+# `theme` : flexoki | monokai | solarized-light | solarized-dark
+# ---------------------------------------------------------------------------
+
+[[profiles]]
+name = "Flexoki"
+command = "/bin/bash"
+theme = "flexoki"
+
+[[profiles]]
+name = "Monokai"
+command = "/bin/bash"
+theme = "monokai"
+
+[[profiles]]
+name = "Solarized Light"
+command = "/bin/bash"
+theme = "solarized-light"
+
+[[profiles]]
+name = "Solarized Dark"
+command = "/bin/bash"
+theme = "solarized-dark"
+
+# Profil personnalisé :
+# [[profiles]]
+# name = "Zsh dev"
+# command = ["/bin/zsh", "-l"]
+# theme = "solarized-dark"
+# working_directory = "/home/kronos/Bureau/TermLaps"
+# env = ["EDITOR=nvim"]
+# font = "JetBrains Mono 11"

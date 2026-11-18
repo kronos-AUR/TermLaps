@@ -1,0 +1,18 @@
+[package]
+name = "termlaps"
+version = "0.1.0"
+edition = "2021"
+description = "A modern terminal for Linux: smart Ctrl+C copy, tabs, split views, profiles and color themes"
+keywords = ["terminal", "vte", "gtk4", "libadwaita"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+gtk4 = { version = "0.11", features = ["v4_10"] }
+libadwaita = { version = "0.9", features = ["v1_6"] }
+vte4 = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+
+[profile.release]
+lto = true
+codegen-units = 1
