@@ -7,8 +7,8 @@
     </linearGradient>
   </defs>
   <rect x="16" y="16" width="480" height="480" rx="104" fill="url(#bg)" stroke="#403E3C" stroke-width="6"/>
-  <!-- prompt chevron: flexoki blue 400 -->
-  <polyline points="158,176 268,256 158,336" fill="none" stroke="#4385BE" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- block cursor: flexoki red 400 -->
-  <rect x="300" y="317" width="112" height="42" rx="10" fill="#D14D41"/>
+  <!-- prompt chevron: flexoki green 400 -->
+  <polyline points="158,176 268,256 158,336" fill="none" stroke="#879A39" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- block cursor: flexoki blue 400 -->
+  <rect x="300" y="317" width="112" height="42" rx="10" fill="#4385BE"/>
 </svg>

@@ -43,6 +43,7 @@ impl AppWindow {
         let window = adw::ApplicationWindow::new(app);
         window.set_title(Some("TermLaps"));
         window.set_default_size(960, 640);
+        window.set_icon_name(Some("com.github.termlaps.Terminal"));
 
         let tab_view = adw::TabView::new();
         tab_view.set_hexpand(true);

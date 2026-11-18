@@ -114,21 +114,40 @@ Exec=$PREFIX/bin/$APP
 Icon=$DESKTOP_ID
 Type=Application
 Categories=System;TerminalEmulator;
+StartupWMClass=$DESKTOP_ID
 EOF
 $INS install -m 644 "$TMP_DESKTOP" "$PREFIX/share/applications/$DESKTOP_ID.desktop"
 rm -f "$TMP_DESKTOP"
 
-# Icon (Flexoki colors), installed as a scalable hicolor icon.
+# Icon (Flexoki colors): SVG in scalable/, plus PNG fallbacks when a renderer
+# is available (some desktop environments ignore SVG icons in the app menu).
 if [ -f "$SRC_DIR/assets/icon.svg" ]; then
     $INS install -d "$PREFIX/share/icons/hicolor/scalable/apps"
     $INS install -m 644 "$SRC_DIR/assets/icon.svg" \
         "$PREFIX/share/icons/hicolor/scalable/apps/$DESKTOP_ID.svg"
+    if command -v rsvg-convert >/dev/null 2>&1; then
+        for size in 16 32 48 64 128 256 512; do
+            $INS install -d "$PREFIX/share/icons/hicolor/${size}x${size}/apps"
+            TMP_PNG="$(mktemp --suffix=.png)"
+            rsvg-convert -w "$size" -h "$size" "$SRC_DIR/assets/icon.svg" -o "$TMP_PNG"
+            $INS install -m 644 "$TMP_PNG" \
+                "$PREFIX/share/icons/hicolor/${size}x${size}/apps/$DESKTOP_ID.png"
+            rm -f "$TMP_PNG"
+        done
+    fi
     command -v gtk-update-icon-cache >/dev/null 2>&1 && \
         $INS gtk-update-icon-cache -q -t -f "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 fi
 
 command -v update-desktop-database >/dev/null 2>&1 && \
     $INS update-desktop-database "$PREFIX/share/applications" 2>/dev/null || true
+
+# KDE/Plasma keeps its own desktop/icon cache: refresh it (as the user).
+if command -v kbuildsycoca6 >/dev/null 2>&1; then
+    kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+    kbuildsycoca5 --noincremental >/dev/null 2>&1 || true
+fi
 
 echo
 echo "TermLaps installed: $PREFIX/bin/$APP"
