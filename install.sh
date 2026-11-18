@@ -111,12 +111,21 @@ cat > "$TMP_DESKTOP" <<EOF
 Name=TermLaps
 Comment=Modern terminal for Linux with smart Ctrl+C
 Exec=$PREFIX/bin/$APP
-Icon=utilities-terminal
+Icon=$DESKTOP_ID
 Type=Application
 Categories=System;TerminalEmulator;
 EOF
 $INS install -m 644 "$TMP_DESKTOP" "$PREFIX/share/applications/$DESKTOP_ID.desktop"
 rm -f "$TMP_DESKTOP"
+
+# Icon (Flexoki colors), installed as a scalable hicolor icon.
+if [ -f "$SRC_DIR/assets/icon.svg" ]; then
+    $INS install -d "$PREFIX/share/icons/hicolor/scalable/apps"
+    $INS install -m 644 "$SRC_DIR/assets/icon.svg" \
+        "$PREFIX/share/icons/hicolor/scalable/apps/$DESKTOP_ID.svg"
+    command -v gtk-update-icon-cache >/dev/null 2>&1 && \
+        $INS gtk-update-icon-cache -q -t -f "$PREFIX/share/icons/hicolor" 2>/dev/null || true
+fi
 
 command -v update-desktop-database >/dev/null 2>&1 && \
     $INS update-desktop-database "$PREFIX/share/applications" 2>/dev/null || true
