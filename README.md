@@ -1,48 +1,80 @@
 # TermLaps
 
-Un terminal moderne pour Linux, écrit en Rust (GTK 4 / libadwaita / VTE).
+A modern terminal for Linux, written in Rust (GTK 4 / libadwaita / VTE).
 
-## Fonctionnalités
+## Features
 
-- **Ctrl+C intelligent** : si du texte est sélectionné à la souris, `Ctrl+C`
-  copie la sélection dans le presse-papiers. Si rien n'est sélectionné,
-  `Ctrl+C` est transmis au processus (0x03 → `SIGINT`) et tue donc le
-  processus au premier plan, comme dans un terminal classique.
-- **Ctrl+V** colle le presse-papiers (`Ctrl+Maj+C` / `Ctrl+Maj+V` continuent
-  de fonctionner, gérés par VTE).
-- **Onglets** : plusieurs terminaux dans des onglets (`Ctrl+Maj+T` pour en
-  ouvrir un nouveau).
-- **Vue scindée** : découper le panneau actif en deux terminaux côte à côte
-  (`Ctrl+Maj+S`), récursivement.
-- **Profils configurables** : chaque profil définit la commande lancée
-  (ex. `/bin/bash`) et un thème de couleurs. Thèmes intégrés : **Flexoki**,
+- **Smart Ctrl+C**: if text is selected with the mouse, `Ctrl+C` copies the
+  selection to the clipboard. If nothing is selected, `Ctrl+C` is passed
+  through to the child process as `0x03`, which the line discipline turns
+  into `SIGINT` — i.e. it kills the foreground process, like a classic
+  terminal. `Ctrl+V` pastes the clipboard (`Ctrl+Shift+C` / `Ctrl+Shift+V`
+  keep working too, handled by VTE).
+- **Tabs**: several terminals in tabs (`Ctrl+Shift+T` opens a new one).
+- **Split view**: split the focused pane into two side-by-side terminals
+  (`Ctrl+Shift+S`), recursively. `Ctrl+Shift+W` closes the focused pane (or
+  the tab if it is the last one).
+- **Configurable profiles**: each profile defines the command to run
+  (e.g. `/bin/bash`) and a color theme. Built-in themes: **Flexoki**,
   **Monokai**, **Solarized Light**, **Solarized Dark**.
 
-## Raccourcis clavier
+## Installation
 
-| Raccourci | Action |
+### Install script (Arch, Debian, Fedora and derivatives)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kronos-AUR/TermLaps/main/install.sh | bash
+```
+
+The script detects your distribution, installs the system dependencies,
+installs Rust via rustup if `cargo` is missing, builds in release mode and
+installs the binary plus a desktop entry (default prefix `~/.local`, or
+`/usr/local` when run as root). Options: `--prefix DIR`, `--help`.
+
+### Manual installation
+
+System dependencies:
+
+| Distribution | Packages |
 |---|---|
-| `Ctrl+Maj+T` | Nouvel onglet (profil par défaut) |
-| `Ctrl+Maj+S` | Scinder le panneau actif en deux |
-| `Ctrl+Maj+W` | Fermer le panneau actif (ou l'onglet s'il est seul) |
-| `Ctrl+Page_Bas` / `Ctrl+Page_Haut` | Onglet suivant / précédent |
-| `Ctrl+C` | Copier la sélection, sinon `SIGINT` au processus |
-| `Ctrl+V` | Coller le presse-papiers |
-| `Ctrl+Maj+C` / `Ctrl+Maj+V` | Copier / coller (raccourcis VTE classiques) |
-| `Ctrl+Q` | Quitter |
+| Arch, CachyOS, Manjaro, EndeavourOS… | `sudo pacman -S base-devel pkgconf gtk4 libadwaita vte4` |
+| Debian 12+, Ubuntu 23.10+, Mint, Pop!_OS… | `sudo apt-get install build-essential pkg-config libgtk-4-dev libadwaita-1-dev libvte-2.91-gtk4-dev` |
+| Fedora, Nobara, RHEL… | `sudo dnf install gcc pkgconf-pkg-config gtk4-devel libadwaita-devel vte291-gtk4-devel` |
 
-Le menu (icône ☰ en haut à gauche) permet d'ouvrir un nouvel onglet avec
-chacun des profils définis dans la configuration.
+Then build and run:
+
+```bash
+git clone https://github.com/kronos-AUR/TermLaps.git
+cd TermLaps
+cargo build --release
+./target/release/termlaps
+```
+
+## Keyboard shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Shift+T` | New tab (default profile) |
+| `Ctrl+Shift+S` | Split the focused pane in two |
+| `Ctrl+Shift+W` | Close the focused pane (or its tab) |
+| `Ctrl+Page_Down` / `Ctrl+Page_Up` | Next / previous tab |
+| `Ctrl+C` | Copy the selection, otherwise `SIGINT` to the process |
+| `Ctrl+V` | Paste the clipboard |
+| `Ctrl+Shift+C` / `Ctrl+Shift+V` | Copy / paste (classic VTE shortcuts) |
+| `Ctrl+Q` | Quit |
+
+The menu (☰ icon, top left) opens a new tab with any of the configured
+profiles.
 
 ## Configuration
 
-Au premier lancement, un fichier de configuration par défaut est écrit dans :
+On first start, a default configuration file is written to:
 
 ```
-$XDG_CONFIG_HOME/termlaps/config.toml   # soit ~/.config/termlaps/config.toml
+$XDG_CONFIG_HOME/termlaps/config.toml   # usually ~/.config/termlaps/config.toml
 ```
 
-Exemple (voir aussi `config.example.toml`) :
+Example (see also `config.example.toml`):
 
 ```toml
 [settings]
@@ -51,11 +83,11 @@ scrollback_lines = 10000
 
 [[profiles]]
 name = "Flexoki"
-command = "/bin/bash"            # ou ["/usr/bin/fish", "-l"]
+command = "/bin/bash"            # or ["/usr/bin/fish", "-l"]
 theme = "flexoki"                # flexoki | monokai | solarized-light | solarized-dark
 
 [[profiles]]
-name = "Zsh solaire"
+name = "Solarized zsh"
 command = ["/bin/zsh", "-l"]
 theme = "solarized-dark"
 working_directory = "/home/kronos"
@@ -63,26 +95,10 @@ env = ["TERM=xterm-256color"]
 font = "JetBrains Mono 11"
 ```
 
-Chaque onglet et chaque panneau scindé hérite du profil du panneau qu'il
-remplace ; un nouvel onglet utilise le dernier profil choisi (ou le premier
-profil de la liste).
+Each tab — and each split pane — inherits the profile of the pane it comes
+from; a new tab uses the last chosen profile (or the first one in the list).
 
-## Compilation
+## License
 
-Dépendances système (ex. Arch/CachyOS) :
-
-```
-sudo pacman -S gtk4 libadwaita vte4 base-devel
-```
-
-Puis :
-
-```
-cargo build --release
-./target/release/termlaps
-```
-
-## Licence
-
-Ce projet est publié **sans licence** : aucun fichier `LICENSE` n'est fourni
-et tous les droits sont réservés.
+This project is published **without a license**: no `LICENSE` file is
+provided and all rights are reserved.
