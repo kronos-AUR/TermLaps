@@ -6,7 +6,7 @@
       <stop offset="1" stop-color="#100F0F"/>
     </linearGradient>
   </defs>
-  <rect x="48" y="48" width="416" height="416" rx="30" fill="url(#bg)" stroke="#403E3C" stroke-width="2"/>
+  <rect x="48" y="48" width="416" height="416" rx="30" fill="url(#bg)" stroke="#CECDC3" stroke-width="16"/>
   <!-- prompt chevron: flexoki green 400 -->
   <polygon points="112,117 168,156 112,195 112,174 146,156 112,138" fill="#879A39"/>
   <!-- cursor underscore: flexoki blue 400 -->
