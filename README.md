@@ -104,8 +104,3 @@ Each tab — and each split pane — inherits the profile of the pane it comes
 from; a new tab uses the last chosen profile (or the first one in the list).
 The color theme is **not** per profile: it is global and set from the
 Settings page.
-
-## License
-
-This project is published **without a license**: no `LICENSE` file is
-provided and all rights are reserved.
